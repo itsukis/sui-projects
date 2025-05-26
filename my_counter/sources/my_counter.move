@@ -1,13 +1,14 @@
 module my_counter::my_counter;
 
 use sui::coin::{Self, Coin};
+use sui::balance::{Self, Balance};
 use sui::sui::SUI;
 
 public struct Counter has key, store {
     id: UID,
     owner: address,
     value: u64,
-    stored_sui: Coin<SUI>,
+    stored_sui: Balance<SUI>,
 }
 
 fun init(ctx: &mut TxContext) {
@@ -15,7 +16,7 @@ fun init(ctx: &mut TxContext) {
         id: object::new(ctx),
         owner: ctx.sender(),
         value: 0,
-        stored_sui: coin::zero(ctx),
+        stored_sui: balance::zero(),
     };
     transfer::public_transfer(counter, tx_context::sender(ctx));
 }
@@ -26,7 +27,7 @@ fun init(ctx: &mut TxContext) {
 public fun increment(counter: &mut Counter, payment: Coin<SUI>) {
     assert!(coin::value(&payment) >= 10_000_000, 1);
     counter.value = counter.value + 1;
-    coin::join(&mut counter.stored_sui, payment);
+    balance::join(&mut counter.stored_sui, coin::into_balance(payment));
 }
 
 entry fun get_value(counter: &Counter): u64 {
@@ -34,8 +35,8 @@ entry fun get_value(counter: &Counter): u64 {
 }
 
 public fun withdraw(counter: &mut Counter, recipient: address, amount: u64, ctx: &mut TxContext) {
-    assert!(coin::value(&counter.stored_sui) >= amount, 2);
-    let coin = coin::split(&mut counter.stored_sui, amount, ctx);
+    assert!(balance::value(&counter.stored_sui) >= amount, 2);
+    let coin = coin::from_balance(balance::split(&mut counter.stored_sui, amount), ctx);
     transfer::public_transfer(coin, recipient);
 }
 
