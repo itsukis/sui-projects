@@ -3,6 +3,7 @@ module my_counter::my_counter;
 use sui::coin::{Self, Coin};
 use sui::balance::{Self, Balance};
 use sui::sui::SUI;
+use sui::event;
 
 const EInsufficientPayment: u64 = 1;
 const EInsufficientBalance: u64 = 2;
@@ -17,6 +18,12 @@ public struct Counter has key, store {
     stored_sui: Balance<SUI>,
 }
 
+public struct WithdrawEvent has copy, drop {
+    counter_id: ID,
+    amount: u64,
+    recipient: address
+}
+
 fun init(ctx: &mut TxContext) {
     let counter = Counter {
         id: object::new(ctx),
@@ -27,9 +34,6 @@ fun init(ctx: &mut TxContext) {
     transfer::public_transfer(counter, tx_context::sender(ctx));
 }
 
-// increment 호출한 사람이 0.01 SUI = 10,000,000 MIST (1 SUI = 10^9 MIST) 를 지불했는지 확인 필요
-// 지불 안했으면 오류 발생
-// increment Args 돈을 넣어야 하는데 (0.01 SUI 이상을 들고 있는 Ojbect)
 public fun increment(counter: &mut Counter, payment: Coin<SUI>) {
     assert!(coin::value(&payment) >= MIN_PAYMENT_MIST, EInsufficientPayment);
     counter.value = counter.value + 1;
@@ -41,9 +45,24 @@ entry fun get_value(counter: &Counter): u64 {
 }
 
 public fun withdraw(counter: &mut Counter, recipient: address, amount: u64, ctx: &mut TxContext) {
-    assert!(&counter.owner == ctx.sender(), EWrongOwner);
+    assert!(&counter.owner == tx_context::sender(ctx), EWrongOwner);
     assert!(balance::value(&counter.stored_sui) >= amount, EInsufficientBalance);
     let coin = coin::from_balance(balance::split(&mut counter.stored_sui, amount), ctx);
+    
+    // Emit withdraw event
+    event::emit(WithdrawEvent {
+        counter_id: object::id(counter),
+        amount,
+        recipient
+    });
+    
     transfer::public_transfer(coin, recipient);
 }
 
+#[test]
+fun create(ctx: &mut TxContext) {
+    init(ctx);
+    let counter = transfer::public_take<Counter>(ctx);
+    assert!(object::id(&counter) != object::null_id(), EWrongOwner);
+    transfer::public_transfer(counter, tx_context::sender(ctx));
+}
