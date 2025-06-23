@@ -23,7 +23,7 @@ public fun delete_child(parent: &mut Parent) : u64 {
 
 #[test_only]
 use sui::test_scenario;
-
+#[test_only]
 use std::debug::print;
 
 #[test]
