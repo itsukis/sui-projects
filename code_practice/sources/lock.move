@@ -1,6 +1,13 @@
 module code_practice::lock;
 
 use sui::dynamic_object_field as dof;
+use std::string::{Self, String};
+use sui::transfer::public_transfer;
+
+public struct MyObject has key, store {
+    id: UID,
+    name: String,
+}
 
 public struct Locked<phantom T: key + store> has key, store {
     id: UID,
@@ -45,4 +52,18 @@ public fun unlock<T: key + store>(mut lock: Locked<T>, key: Key): T {
     obj
 }
 
+public entry fun create_my_object(ctx: &mut TxContext) {
+    let my_obj = MyObject {
+        id: object::new(ctx),
+        name: string::utf8(b"my_obj"),
+    };
+    
+    public_transfer(my_obj, sui::tx_context::sender(ctx));
 
+}
+
+public entry fun lock_my_object(obj: MyObject, ctx: &mut TxContext) {
+    let (lock, key) = lock(obj, ctx);
+    public_transfer(lock, sui::tx_context::sender(ctx));
+    public_transfer(key, sui::tx_context::sender(ctx));
+}
