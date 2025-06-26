@@ -52,6 +52,9 @@ public fun unlock<T: key + store>(mut lock: Locked<T>, key: Key): T {
     obj
 }
 
+/*
+    entry functions for testing
+*/
 public entry fun create_my_object(ctx: &mut TxContext) {
     let my_obj = MyObject {
         id: object::new(ctx),
@@ -66,4 +69,9 @@ public entry fun lock_my_object(obj: MyObject, ctx: &mut TxContext) {
     let (lock, key) = lock(obj, ctx);
     public_transfer(lock, sui::tx_context::sender(ctx));
     public_transfer(key, sui::tx_context::sender(ctx));
+}
+
+public entry fun unlock_my_object(lock: Locked<MyObject>, key: Key, ctx: &mut TxContext) {
+    let obj = unlock(lock, key);
+    public_transfer(obj, sui::tx_context::sender(ctx));
 }
