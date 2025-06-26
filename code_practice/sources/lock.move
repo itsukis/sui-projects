@@ -52,6 +52,11 @@ public fun unlock<T: key + store>(mut lock: Locked<T>, key: Key): T {
     obj
 }
 
+public fun create_escrow(obj: MyObject, ctx: &mut TxContext) {
+    
+}
+
+
 /*
     entry functions for testing
 */
